@@ -1,0 +1,98 @@
+{
+  "project_info": {
+    "project_number": "160887946547",
+    "project_id": "example-cfc4c",
+    "storage_bucket": "example-cfc4c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:160887946547:android:b84b6050662d9325731246",
+        "android_client_info": {
+          "package_name": "com.example.example_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "160887946547-cc8ke3kvr5ar0qk6e5roiv52lu84gtgc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.example_app",
+            "certificate_hash": "e71318ac359630ac91be6be0c64fe4c52462d32f"
+          }
+        },
+        {
+          "client_id": "160887946547-50tccs5gqqje683se9hrjh6b8kcq37g1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0RRZCcb9fz_E9tFCcJMsBa1jWqorjvwI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "160887946547-50tccs5gqqje683se9hrjh6b8kcq37g1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "160887946547-u99ajt8iuf5ojd3qkqgcnv3d8s6st1si.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.wardComplaintApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:160887946547:android:7296fd766faeaee1731246",
+        "android_client_info": {
+          "package_name": "com.example.ward_complaint_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "160887946547-8noq3607p916og2cfj26rv6k2qsrbd1b.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ward_complaint_app",
+            "certificate_hash": "e71318ac359630ac91be6be0c64fe4c52462d32f"
+          }
+        },
+        {
+          "client_id": "160887946547-50tccs5gqqje683se9hrjh6b8kcq37g1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0RRZCcb9fz_E9tFCcJMsBa1jWqorjvwI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "160887946547-50tccs5gqqje683se9hrjh6b8kcq37g1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "160887946547-u99ajt8iuf5ojd3qkqgcnv3d8s6st1si.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.wardComplaintApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
