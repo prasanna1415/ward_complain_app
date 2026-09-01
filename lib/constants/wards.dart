@@ -1,11 +1,16 @@
-/// Static list of wards for now. In a later phase, this could move into
-/// its own Firestore 'wards' collection so admins can manage it dynamically.
-const List<String> kWardList = [
-  'Ward 1', 'Ward 2', 'Ward 3', 'Ward 4', 'Ward 5',
-  'Ward 6', 'Ward 7', 'Ward 8', 'Ward 9', 'Ward 10',
-  'Ward 11', 'Ward 12', 'Ward 13', 'Ward 14', 'Ward 15',
-  'Ward 16', 'Ward 17', 'Ward 18', 'Ward 19', 'Ward 20',
-  'Ward 21', 'Ward 22', 'Ward 23', 'Ward 24', 'Ward 25',
-  'Ward 26', 'Ward 27', 'Ward 28', 'Ward 29', 'Ward 30',
-  'Ward 31', 'Ward 32',
-];
+/// Bhaktapur District's real municipality and ward structure,
+/// based on Nepal's 2022 local election data.
+const Map<String, int> kMunicipalityWardCounts = {
+  'Bhaktapur Municipality': 10,
+  'Madhyapur Thimi Municipality': 9,
+  'Suryabinayak Municipality': 10,
+  'Changunarayan Municipality': 9,
+};
+
+List<String> get kMunicipalityList => kMunicipalityWardCounts.keys.toList();
+
+/// Returns ward labels like 'Ward 1', 'Ward 2', ... for a given municipality.
+List<String> wardsForMunicipality(String municipality) {
+  final count = kMunicipalityWardCounts[municipality] ?? 0;
+  return List.generate(count, (i) => 'Ward ${i + 1}');
+}

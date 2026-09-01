@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/route_service.dart';
 import 'register_screen.dart';
-import 'home_screen.dart';
-import 'verify_email_screen.dart';
+import 'complete_profile_screen.dart';
 import '../services/auth_service.dart';
+import '../services/route_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -68,16 +67,30 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final user = await AuthService.signInWithGoogle();
-      if (user == null) {
-        return;
-      }
+      final result = await AuthService.signInWithGoogle();
+      if (result == null) return; // user cancelled
 
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
+
+      if (result.needsProfile) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const CompleteProfileScreen()),
+        );
+      } else {
+        final nextScreen = await RouteService.resolveNextScreen();
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => nextScreen),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      setState(() {
+        _errorMessage = e.code == 'account-exists-with-different-credential'
+            ? 'This email is already registered. Please log in with your email and password instead.'
+            : 'Google sign-in failed. Please try again.';
+      });
     } catch (e) {
       setState(() {
         _errorMessage = 'Google sign-in failed. Please try again.';

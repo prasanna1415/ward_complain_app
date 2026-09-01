@@ -3,17 +3,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../screens/login_screen.dart';
 import '../screens/verify_email_screen.dart';
-import '../screens/select_ward_screen.dart';
+import '../screens/complete_profile_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/admin_home_screen.dart';
 
 class RouteService {
-  /// Decides which screen a logged-in (or logged-out) user should see.
-  /// Centralizing this in one place means Splash, Login, and Google
-  /// Sign-In all make the exact same decision instead of repeating logic.
   static Future<Widget> resolveNextScreen() async {
     final user = FirebaseAuth.instance.currentUser;
-
     if (user == null) {
       return const LoginScreen();
     }
@@ -38,10 +34,16 @@ class RouteService {
 
     final data = userDoc.data();
     final role = data?['role'] as String? ?? 'citizen';
+    final municipality = data?['municipality'] as String?;
     final wardId = data?['wardId'] as String?;
 
-    if (role == 'citizen' && (wardId == null || wardId.isEmpty)) {
-      return const SelectWardScreen();
+    final profileIncomplete = municipality == null ||
+        municipality.isEmpty ||
+        wardId == null ||
+        wardId.isEmpty;
+
+    if (role == 'citizen' && profileIncomplete) {
+      return const CompleteProfileScreen();
     }
 
     if (role == 'admin') {

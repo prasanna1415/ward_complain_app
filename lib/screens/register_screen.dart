@@ -2,10 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/route_service.dart';
-import 'home_screen.dart';
 import 'verify_email_screen.dart';
+import 'complete_profile_screen.dart';
 import '../services/auth_service.dart';
+import '../services/route_service.dart';
 import '../constants/wards.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -22,16 +22,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  String? _selectedMunicipality;
+  String? _selectedWard;
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _agreedToTerms = false;
   String? _errorMessage;
-  String? _selectedWard;
   double _passwordStrength = 0;
   String _passwordStrengthLabel = '';
   Color _passwordStrengthColor = Colors.grey;
-
 
   @override
   void dispose() {
@@ -100,7 +100,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       )
           .timeout(const Duration(seconds: 15));
 
-      // Save extra profile info (name, phone, role) in Firestore.
       try {
         await FirebaseFirestore.instance
             .collection('users')
@@ -109,6 +108,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'name': _nameController.text.trim(),
           'email': _emailController.text.trim(),
           'phone': _phoneController.text.trim(),
+          'municipality': _selectedMunicipality,
           'wardId': _selectedWard,
           'role': 'citizen',
           'createdAt': FieldValue.serverTimestamp(),
@@ -119,7 +119,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         debugPrint('Firestore profile write failed: $firestoreError');
       }
 
-      // Send verification email right after account creation.
       await credential.user?.sendEmailVerification();
 
       if (!mounted) return;
@@ -155,18 +154,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      final user = await AuthService.signInWithGoogle();
-      if (user == null) {
-        return;
-      }
+      final result = await AuthService.signInWithGoogle();
+      if (result == null) return; // user cancelled
 
       if (!mounted) return;
-      final nextScreen = await RouteService.resolveNextScreen();
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => nextScreen),
-      );
+
+      if (result.needsProfile) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const CompleteProfileScreen()),
+        );
+      } else {
+        final nextScreen = await RouteService.resolveNextScreen();
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => nextScreen),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      setState(() {
+        _errorMessage = e.code == 'account-exists-with-different-credential'
+            ? 'This email is already registered. Please log in with your email and password instead.'
+            : 'Google sign-in failed. Please try again.';
+      });
     } catch (e) {
       setState(() {
         _errorMessage = 'Google sign-in failed. Please try again.';
@@ -222,6 +233,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final wardOptions = _selectedMunicipality == null
+        ? <String>[]
+        : wardsForMunicipality(_selectedMunicipality!);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Register'),
@@ -286,15 +301,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
+                  initialValue: _selectedMunicipality,
+                  decoration: const InputDecoration(
+                    labelText: 'Municipality',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: kMunicipalityList
+                      .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedMunicipality = value;
+                      _selectedWard = null;
+                    });
+                  },
+                  validator: (value) {
+                    if (value == null) {
+                      return 'Please select your municipality';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
                   initialValue: _selectedWard,
                   decoration: const InputDecoration(
                     labelText: 'Ward',
                     border: OutlineInputBorder(),
                   ),
-                  items: kWardList
-                      .map((ward) => DropdownMenuItem(value: ward, child: Text(ward)))
+                  items: wardOptions
+                      .map((w) => DropdownMenuItem(value: w, child: Text(w)))
                       .toList(),
-                  onChanged: (value) {
+                  onChanged: _selectedMunicipality == null
+                      ? null
+                      : (value) {
                     setState(() {
                       _selectedWard = value;
                     });
