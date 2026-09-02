@@ -3,11 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/app_notification.dart';
 
 class NotificationService {
-  static final _notificationsRef = FirebaseFirestore.instance.collection('notifications');
+  static final _notificationsRef =
+  FirebaseFirestore.instance.collection('notifications');
 
-  /// CREATE - used internally whenever something notification-worthy
-  /// happens (complaint submitted, status changed, etc). Not called
-  /// directly by the UI - other services call this after they act.
+  /// CREATE - creates a notification for one user.
   static Future<void> create({
     required String userId,
     required String message,
@@ -22,24 +21,78 @@ class NotificationService {
     });
   }
 
-  /// READ - live stream of the current user's notifications, newest first.
+  /// NOTIFY ALL ADMINS
+  ///
+  /// This is used when something happens that admins
+  /// need to know about, such as a citizen submitting
+  /// a complaint or adding a comment.
+  static Future<void> notifyAdmins({
+    required String message,
+    String? relatedComplaintId,
+  }) async {
+    final admins = await FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: 'admin')
+        .get();
+
+    for (final admin in admins.docs) {
+      await create(
+        userId: admin.id,
+        message: message,
+        relatedComplaintId: relatedComplaintId,
+      );
+    }
+  }
+
+  /// READ - live stream of the current user's notifications.
   static Stream<List<AppNotification>> myNotificationsStream() {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return const Stream.empty();
+
+    if (user == null) {
+      return const Stream.empty();
+    }
 
     return _notificationsRef
         .where('userId', isEqualTo: user.uid)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-        .map((doc) => AppNotification.fromFirestore(doc.id, doc.data()))
-        .toList());
+        .map((snapshot) {
+      final notifications = snapshot.docs
+          .map(
+            (doc) => AppNotification.fromFirestore(
+          doc.id,
+          doc.data(),
+        ),
+      )
+          .toList();
+
+      // Sort newest notifications first.
+      notifications.sort((a, b) {
+        if (a.createdAt == null && b.createdAt == null) {
+          return 0;
+        }
+
+        if (a.createdAt == null) {
+          return 1;
+        }
+
+        if (b.createdAt == null) {
+          return -1;
+        }
+
+        return b.createdAt!.compareTo(a.createdAt!);
+      });
+
+      return notifications;
+    });
   }
 
-  /// Live count of unread notifications, for the badge icon.
+  /// Live count of unread notifications.
   static Stream<int> unreadCountStream() {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return Stream.value(0);
+
+    if (user == null) {
+      return Stream.value(0);
+    }
 
     return _notificationsRef
         .where('userId', isEqualTo: user.uid)
@@ -48,15 +101,26 @@ class NotificationService {
         .map((snapshot) => snapshot.docs.length);
   }
 
+  /// Mark one notification as read.
   static Future<void> markAsRead(String notificationId) async {
-    await _notificationsRef.doc(notificationId).update({'read': true});
+    await _notificationsRef.doc(notificationId).update({
+      'read': true,
+    });
   }
 
-  static Future<void> markAllAsRead(List<String> notificationIds) async {
+  /// Mark multiple notifications as read.
+  static Future<void> markAllAsRead(
+      List<String> notificationIds,
+      ) async {
     final batch = FirebaseFirestore.instance.batch();
+
     for (final id in notificationIds) {
-      batch.update(_notificationsRef.doc(id), {'read': true});
+      batch.update(
+        _notificationsRef.doc(id),
+        {'read': true},
+      );
     }
+
     await batch.commit();
   }
 }

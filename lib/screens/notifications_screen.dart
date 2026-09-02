@@ -28,6 +28,18 @@ class NotificationsScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text(
+                  'Notification Error:\n\n${snapshot.error}',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+          }
+
           final notifications = snapshot.data ?? [];
 
           if (notifications.isEmpty) {

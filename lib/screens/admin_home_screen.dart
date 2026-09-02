@@ -9,6 +9,7 @@ import '../models/complaint.dart';
 import '../constants/categories.dart';
 import 'notifications_screen.dart';
 import '../services/notification_service.dart';
+import '../models/feedback.dart';
 
 class AdminHomeScreen extends StatelessWidget {
   const AdminHomeScreen({super.key});
@@ -64,20 +65,56 @@ class AdminHomeScreen extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () => _logout(context),
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Logout'),
+                  content: const Text('Are you sure you want to logout?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text(
+                        'Logout',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirmed == true) {
+                await _logout(context);
+              }
+            },
           ),
         ],
       ),
-      body: StreamBuilder<List<Complaint>>(
-        stream: AdminStatsService.allComplaintsStream(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+body: StreamBuilder<List<Complaint>>(
+stream: AdminStatsService.allComplaintsStream(),
+builder: (context, snapshot) {
+if (snapshot.connectionState == ConnectionState.waiting) {
+return const Center(child: CircularProgressIndicator());
+}
 
-          final complaints = snapshot.data ?? [];
-          final stats = AdminStats.fromComplaints(complaints);
-          final slaStats = SlaStats.fromComplaints(complaints);
+final complaints = snapshot.data ?? [];
+final stats = AdminStats.fromComplaints(complaints);
+final slaStats = SlaStats.fromComplaints(complaints);
+
+return StreamBuilder<List<ComplaintFeedback>>(
+stream: AdminStatsService.allFeedbackStream(),
+builder: (context, feedbackSnapshot) {
+final feedbackList = feedbackSnapshot.data ?? [];
+final avgRating = feedbackList.isEmpty
+? 0.0
+: feedbackList.map((f) => f.rating).reduce((a, b) => a + b) / feedbackList.length;
+final satisfactionPercent = feedbackList.isEmpty
+? 0
+: ((feedbackList.where((f) => f.rating >= 4).length / feedbackList.length) * 100).round();
 
           final mostVoted = [...complaints]..sort((a, b) => b.voteCount.compareTo(a.voteCount));
           final topVoted = mostVoted.take(5).toList();
@@ -223,10 +260,43 @@ class AdminHomeScreen extends StatelessWidget {
               else
                 ...topPriority.map((c) => _MiniComplaintRow(complaint: c, trailingValue: c.priority)),
               const SizedBox(height: 24),
+              if (feedbackList.isNotEmpty) ...[
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.amber.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Citizen Satisfaction', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _MiniStat(label: 'Avg Rating', value: '${avgRating.toStringAsFixed(1)} / 5'),
+                          ),
+                          Expanded(
+                            child: _MiniStat(label: 'Satisfaction', value: '$satisfactionPercent%'),
+                          ),
+                          Expanded(
+                            child: _MiniStat(label: 'Responses', value: '${feedbackList.length}'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
             ],
           );
-        },
-      ),
+},
+);
+},
+),
     );
   }
 }

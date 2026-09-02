@@ -1,13 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/complaint.dart';
+import 'notification_service.dart';
 
 class ComplaintService {
-  static final _complaintsRef = FirebaseFirestore.instance.collection('complaints');
+  static final _complaintsRef =
+  FirebaseFirestore.instance.collection('complaints');
 
-  /// CREATE - submits a new complaint. Ward starts as 'Unconfirmed' and
-  /// is assigned by an admin during review, since citizens - especially
-  /// in an unfamiliar area - often don't know their exact ward number.
+  /// CREATE - submits a new complaint.
+  /// Ward starts as 'Unconfirmed' and is assigned by an admin during review.
   static Future<void> createComplaint({
     required String municipality,
     required String categoryId,
@@ -18,7 +19,12 @@ class ComplaintService {
     String? address,
   }) async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) throw Exception('You must be logged in to report a complaint.');
+
+    if (user == null) {
+      throw Exception(
+        'You must be logged in to report a complaint.',
+      );
+    }
 
     final complaint = Complaint(
       id: '',
@@ -37,29 +43,64 @@ class ComplaintService {
       voteCount: 0,
     );
 
-    await _complaintsRef.add(complaint.toFirestoreForCreate());
+    // Save the complaint to Firestore
+    final docRef = await _complaintsRef.add(
+      complaint.toFirestoreForCreate(),
+    );
+
+    // Notify the citizen
+    await NotificationService.create(
+      userId: user.uid,
+      message: 'Your complaint "$title" was submitted successfully.',
+      relatedComplaintId: docRef.id,
+    );
+
+// Notify all admins
+    await NotificationService.notifyAdmins(
+      message: 'A new complaint "$title" has been submitted.',
+      relatedComplaintId: docRef.id,
+    );
   }
 
+  /// READ - returns the currently logged-in user's complaints.
   static Stream<List<Complaint>> myComplaintsStream() {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return const Stream.empty();
+
+    if (user == null) {
+      return const Stream.empty();
+    }
 
     return _complaintsRef
         .where('userId', isEqualTo: user.uid)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-        .map((doc) => Complaint.fromFirestore(doc.id, doc.data()))
-        .toList());
+        .map(
+          (snapshot) => snapshot.docs
+          .map(
+            (doc) => Complaint.fromFirestore(
+          doc.id,
+          doc.data(),
+        ),
+      )
+          .toList(),
+    );
   }
 
+  /// READ - listens to a single complaint.
   static Stream<Complaint?> complaintStream(String complaintId) {
     return _complaintsRef.doc(complaintId).snapshots().map((doc) {
-      if (!doc.exists) return null;
-      return Complaint.fromFirestore(doc.id, doc.data()!);
+      if (!doc.exists) {
+        return null;
+      }
+
+      return Complaint.fromFirestore(
+        doc.id,
+        doc.data()!,
+      );
     });
   }
 
+  /// UPDATE - updates the complaint details.
   static Future<void> updateComplaint({
     required String complaintId,
     required String title,
@@ -73,9 +114,7 @@ class ComplaintService {
     });
   }
 
-  /// UPDATE - editing just the location, kept separate from
-  /// updateComplaint() since it's a distinct action in the UI
-  /// (opens the map picker rather than a text form).
+  /// UPDATE - updates only the complaint location.
   static Future<void> updateComplaintLocation({
     required String complaintId,
     required double latitude,
@@ -91,6 +130,7 @@ class ComplaintService {
     });
   }
 
+  /// DELETE - deletes a complaint.
   static Future<void> deleteComplaint(String complaintId) async {
     await _complaintsRef.doc(complaintId).delete();
   }

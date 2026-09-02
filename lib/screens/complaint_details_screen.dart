@@ -9,6 +9,7 @@ import '../widgets/priority_badge.dart';
 import '../widgets/comments_section.dart';
 import '../widgets/admin_actions_panel.dart';
 import 'pick_location_screen.dart';
+import '../widgets/feedback_section.dart';
 
 class ComplaintDetailsScreen extends StatelessWidget {
   final String complaintId;
@@ -282,9 +283,18 @@ class ComplaintDetailsScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                     ],
+
                     if (isAdmin) ...[
                       AdminActionsPanel(complaint: complaint),
                       const SizedBox(height: 16),
+                    ],
+
+                    if (complaint.status == 'resolved' || complaint.status == 'closed') ...[
+                      FeedbackSection(
+                        complaintId: complaint.id,
+                        complaintOwnerId: complaint.userId,
+                        isAdmin: isAdmin,
+                      ),
                     ],
                     Row(
                       children: [

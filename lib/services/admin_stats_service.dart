@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/complaint.dart';
+import '../models/feedback.dart';
 
 class AdminStats {
   final int total;
@@ -50,6 +51,14 @@ class AdminStatsService {
         .snapshots()
         .map((snapshot) => snapshot.docs
         .map((doc) => Complaint.fromFirestore(doc.id, doc.data()))
+        .toList());
+  }
+  static Stream<List<ComplaintFeedback>> allFeedbackStream() {
+    return FirebaseFirestore.instance
+        .collection('feedback')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+        .map((doc) => ComplaintFeedback.fromFirestore(doc.id, doc.data()))
         .toList());
   }
 }
